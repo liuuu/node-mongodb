@@ -1,26 +1,16 @@
 const expect = require('expect');
 const request = require('supertest');
+const { User } = require('../models/user');
 
 const { app } = require('../server.js');
-const { Todo } = require('../db/models/todo');
+const { Todo } = require('../models/todo');
 const { ObjectID } = require('mongodb')
 
-const todos =  [{
-  _id: new ObjectID(),
-  text: 'first test todo'
-},{
-  _id: new ObjectID(),
-  text: 'second test todo',
-  completed: true,
-  completedAt: 3333
-}];
+const { todos, populateTodos, users, populateUsers } = require('./seed/seed');
 
-beforeEach((done) => {
-  Todo.remove({}).then(() => {
-    return Todo.insertMany(todos);
-  }).then(() => done());
+beforeEach(populateTodos);
+beforeEach(populateUsers);
 
-});
 
 describe('POST /todos', () => {
   it('should add new todo', (done) => {
@@ -157,5 +147,71 @@ describe('PATCH /todos/:id', () => {
       })
       .end(done);
   });
+
+})
+
+describe('GET /users/me', () => {
+  it('should return user if authenticate', done => {
+    request(app)
+      .get('/users/me')
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body._id).toBe(users[0]._id.toHexString());
+        expect(res.body.email).toBe(users[0].email);
+      })
+      .end(done);
+  });
+
+  it('should return 401 when not authenticate', done => {
+    request(app)
+      .get('/users/me')
+      .expect(401)
+      .expect(res => {
+        expect(res.body).toEqual({});
+      })
+      .end(done);
+
+  })
+})
+
+
+describe('POST /users', () => {
+  it('should create a user', done => {
+    var email = 'test@test.com';
+    var password = 'qweqdasd';
+    request(app)
+     .post('/users')
+     .send({email, password})
+     .expect(200)
+     .expect(res => {
+       expect(res.headers['x-auth']).toExist()
+       expect(res.body.email).toBe(email)
+     })
+     .end(err => {
+       if(err){
+         return done(err);
+       }
+
+       User.findOne({email}).then(user => {
+         expect(user).toExist();
+         expect(user.password).toNotBe(password);
+         done();
+       })
+     });
+
+  });
+
+  it('should return validation errors if request inValid such as short password', done => {
+    request(app)
+      .post('/users')
+      .send({
+        email: 'zdd'
+
+      })
+      .expect(400)
+      .end(done);
+  })
+
 
 })
