@@ -1,8 +1,9 @@
 require('./config/config.js');
 
 const { mongoose } = require('./db/mongoose');
-const { User } = require('./db/models/user');
-const { Todo } = require('./db/models/todo');
+const { User } = require('./models/user');
+const { Todo } = require('./models/todo');
+const  { authenticate } = require('./middleware/authenticate');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -100,16 +101,26 @@ app.post('/users', (req, res) => {
   // the User model will validate the input
   var user = new User(body);
 
+
   user.save().then(user => {
+
     return user.generateAuthToken();
 
   }).then(token => {
+    // prefix with x-
     res.header('x-auth', token).send(user);
+
+
   }).catch(e => {
     res.status(400).send(e);
   })
 })
 
+
+
+app.get('/users/me', authenticate, (req, res) => {
+  res.send(req.user);
+});
 
 
 
