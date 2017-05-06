@@ -103,7 +103,7 @@ app.post('/users', (req, res) => {
 
 
   user.save().then(user => {
-
+    console.log('after pre');
     return user.generateAuthToken();
 
   }).then(token => {
@@ -114,7 +114,9 @@ app.post('/users', (req, res) => {
   }).catch(e => {
     res.status(400).send(e);
   })
-})
+});
+
+
 
 
 
